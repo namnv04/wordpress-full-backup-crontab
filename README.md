@@ -23,11 +23,6 @@ aws configure
 ```
 ### Config shell script
 - Create  `~/backup/wp-backup.sh` file with content of [wp-backup.sh](wp-backup.sh)
-- Make shell script executable
-```
-cd ~/backup
-chmod 700 wp-backup.sh
-```
 - Open backup.sh and update following values:
 ```
 # For msyql database backup
@@ -44,8 +39,12 @@ upload_folder="wp-website-root/wp-content/uploads"
 upload_backup_path="~/backup/wp-uploads"
 upload_s3_path="s3://backet_name/backup/wp-uploads/"
 ```
-
-### Crontab
+- Make shell script executable
+```
+cd ~/backup
+chmod 700 wp-backup.sh
+```
+## Crontab
 - Test to see if your shell script works
 ```
 cd ~/backup

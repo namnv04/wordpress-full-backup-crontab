@@ -69,4 +69,4 @@ crontab -e
 - Feel free to report issue and contribute your idea.
 
 ## License
-MIT
+[MIT](LICENSE)

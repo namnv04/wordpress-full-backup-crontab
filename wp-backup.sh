@@ -1,48 +1,54 @@
 # Configurations
 # Database credentials
-user="mysql_user"
-password="mysql_password"
-host="localhost"
-db_name="mysql_database"
-backup_path="~/backup/mysql"
-mysql_s3_path="s3://bucket_name/backup/mysql/"
-date=$(date +"%d-%b-%Y")
+mysql_user="mysql_user"
+mysql_password="mysql_password"
+mysql_host="host"
+mysql_database="mysql_database"
+local_backup_path="/sites/folder/regular-backup"
+s3_backup_path="s3://bucket-name/regular-backup"
+d=$(date +"%d-%b-%Y")
+site_folder="/sites/folder"
+www_folder=$site_folder"/www"
+wp_content_folder=$www_folder"/wp-content"
+site_name="site_name"
 
 # Run commands
 # Set default file permissions
 umask 177
 # Dump database into SQL file
-mysqldump --user=$user --password=$password --host=$host $db_name > $backup_path/$db_name-$date.sql
+echo "Export database..."
+mysqldump --user=$mysql_user --password=$mysql_password --host=$mysql_host $mysql_database > $local_backup_path/$mysql_database-$d.sql
 if [ "$?" -eq 0 ]
 then
-    echo "Export success"
     echo "Compressing..."
-    cd $backup_path
-    tar cfvz $db_name-$date.sql.gz $db_name-$date.sql
-    echo "Uploading S3..."
-    aws s3 cp $backup_path/$db_name-$date.sql.gz $mysql_s3_path
-    echo "Backup mysql gz file to S3 done."
+    cd $local_backup_path
+    sudo tar cf $mysql_database-$d.sql.gz $mysql_database-$d.sql
 else
     echo "Mysqldump encountered a problem look in database.err for information"
 fi
-# Delete files older than 1 days
-echo "cleanup old backups..."
-find $backup_path/* -type f -mtime +3 -exec rm {} ;
 
+echo "Compressing wp-content folder..."
+cd $www_folder
+sudo tar cf "wp-content"-$d.gz "wp-content"
+sudo mv "wp-content"-$d.gz $local_backup_path"/"
+echo "Done compress wp-content folder"
 
-# Configurations
-upload_name="wp-uploads"
-upload_folder="wp-website-root/wp-content/uploads"
-upload_backup_path="~/backup/uploads"
-upload_s3_path="s3://backet_name/backup/wp-uploads/"
+echo "Compressing wp-config.php..."
+cd $www_folder
+sudo tar cf "wp-config.php"-$d.gz "wp-config.php"
+sudo mv "wp-config.php"-$d.gz $local_backup_path"/"
+echo "Done compressing wp-config.php..."
 
-# Run commands
-echo "Backing up uploads folder..."
-echo "Start Compressing..."
-cd $upload_backup_path
-tar cfvz $upload_name-$date.gz $upload_folder
-echo "Done Compressing."
-aws s3 cp $upload_backup_path/$upload_name-$date.gz $upload_s3_path
-# Delete files older than 1 days
-echo "cleanup old backups..."
-find $upload_backup_path/* -type f -mtime +3 -exec rm {} ;
+echo "Bundle"
+cd $local_backup_path
+sudo tar cf $site_name-$d.gz $mysql_database-$d.sql.gz "wp-content"-$d.gz "wp-config.php"-$d.gz
+echo "Cleaning..."
+sudo rm -rf $mysql_database-$d.sql.gz "wp-content"-$d.gz "wp-config.php"-$d.gz
+echo "Done Cleaning..."
+echo "Done Bundle"
+
+# Clean old backup locally
+sudo find $local_backup_path/* -type f -mtime +0 -exec rm {};
+
+# Upload S3
+sudo aws s3 cp $local_backup_path/$site_name-$d.gz $s3_backup_path"/"
